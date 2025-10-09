@@ -1,0 +1,82 @@
+name: Publish labs to Docker Hub (auto)
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'lab*/**'
+      - '.github/workflows/publish.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect changed labs
+    runs-on: ubuntu-latest
+    outputs:
+      labs: ${{ steps.collect.outputs.labs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Changed files under lab*/
+        id: changes
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            lab*/**
+
+      - name: Collect labs list
+        id: collect
+        uses: actions/github-script@v7
+        env:
+          ALL_CHANGED: ${{ steps.changes.outputs.all_changed_files }}
+        with:
+          script: |
+            const fs = require('fs');
+            const changed = (process.env.ALL_CHANGED || '').split('\n').filter(Boolean);
+            const labs = new Set();
+            for (const f of changed) {
+              const m = f.match(/^(lab[^/]+)\//);
+              if (m) {
+                const dir = m[1];
+                if (fs.existsSync(`${dir}/Dockerfile`)) labs.add(dir);
+              }
+            }
+            const arr = [...labs];
+            core.info(`Labs to publish: ${JSON.stringify(arr)}`);
+            core.setOutput('labs', JSON.stringify(arr));
+
+  publish:
+    name: Build & Push images
+    needs: detect
+    if: ${{ needs.detect.outputs.labs != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lab: ${{ fromJson(needs.detect.outputs.labs) }}
+      max-parallel: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push ${{ matrix.lab }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.lab }}
+          push: true
+          tags: |
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.lab }}:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.lab }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
