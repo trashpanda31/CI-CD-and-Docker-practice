@@ -61,15 +61,29 @@ jobs:
         with:
           name: lab04-client-image
           path: .
+
       - name: Load Docker image
         run: docker load -i lab04-client.tar
-      - name: Run container and test
+
+      - name: Run container and wait until ready
         run: |
           docker run -d --rm -p 8080:80 --name lab04-client lab04-client:ci
-          for i in {1..20}; do
-            if curl -fsS http://127.0.0.1:8080 >/dev/null; then exit 0; fi
+
+          echo "⏳ Waiting for container to become ready..."
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080 >/dev/null; then
+              echo "✅ Client is up!"
+              exit 0
+            fi
             sleep 1
           done
+
+          echo "❌ Client failed to start within 30s"
+          echo "---- docker ps ----"
+          docker ps -a || true
+          echo "---- docker logs ----"
+          docker logs lab04-client || true
           exit 1
+
 
         
