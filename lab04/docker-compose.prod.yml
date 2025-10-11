@@ -1,6 +1,6 @@
 services:
   server:
-    image: docker.io/$trashpanda31/lab04-src-server:${TAG:-latest}
+    image: docker.io/trashpanda31/lab04-src-server:${TAG:-latest}
     container_name: lab04-server
     environment: [ "PORT=4000" ]
     ports: [ "4000:4000" ]
@@ -13,7 +13,7 @@ services:
     networks: [ labnet ]
 
   client:
-    image: docker.io/$trashpanda31/lab04-src-client:${TAG:-latest}
+    image: docker.io/trashpanda31/lab04-src-client:${TAG:-latest}
     container_name: lab04-client
     depends_on:
       server:
