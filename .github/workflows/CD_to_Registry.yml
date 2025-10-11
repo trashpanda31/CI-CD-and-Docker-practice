@@ -64,7 +64,7 @@ jobs:
             const arr = [...targets];
             core.info(`Build targets detected: ${JSON.stringify(arr)}`);
             core.setOutput('labs', JSON.stringify(arr));
-
+            
   publish:
     name: Build & Push images
     needs: detect
@@ -82,13 +82,20 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: sanitize
+        run: |
+          SANITIZED="${{ matrix.target }}"
+          SANITIZED="${SANITIZED//\//-}"
+          echo "tag=${SANITIZED}" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@v6
         with:
           context: ./${{ matrix.target }}
           file: ./${{ matrix.target }}/Dockerfile
           push: true
           tags: |
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.target//\//- }}:latest
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.target//\//- }}:${{ github.sha }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.sanitize.outputs.tag }}:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.sanitize.outputs.tag }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
