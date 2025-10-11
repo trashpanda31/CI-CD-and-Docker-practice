@@ -22,7 +22,7 @@ app.use(express.static(path.join(__dirname, "../client/build")));
 // match one above, send back React's index.html file.
 app.get("*", (req, res) => {
   console.log("req.path", req.path);
-  res.sendFile(path.join(__dirname + "../client/build/index.html"));
+  res.sendFile(path.join(__dirname, "../client/build/index.html"));
 });
 
 module.exports = app;
