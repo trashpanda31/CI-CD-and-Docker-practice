@@ -31,8 +31,6 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v4
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build Docker image
@@ -67,23 +65,28 @@ jobs:
 
       - name: Run container and wait until ready
         run: |
-          docker run -d --rm -p 8080:80 --name lab04-client lab04-client:ci
+          docker run -d --name lab04-client \
+            --add-host=host.docker.internal:host-gateway \
+            -e API_ORIGIN=http://host.docker.internal:4000 \
+            -p 8080:80 lab04-client:ci
 
-          echo "⏳ Waiting for container to become ready..."
-          for i in {1..30}; do
+          echo "⏳ Waiting for client..."
+          for i in {1..40}; do
             if curl -fsS http://127.0.0.1:8080 >/dev/null; then
-              echo "✅ Client is up!"
+              echo "✅ Client static is up!"
               exit 0
             fi
             sleep 1
           done
 
-          echo "❌ Client failed to start within 30s"
-          echo "---- docker ps ----"
+          echo "❌ Client failed to start in time"
           docker ps -a || true
-          echo "---- docker logs ----"
           docker logs lab04-client || true
           exit 1
 
+      - name: Show rendered nginx config (debug)
+        run: docker exec lab04-client cat /etc/nginx/conf.d/default.conf || true
 
-        
+      - name: Cleanup
+        if: always()
+        run: docker rm -f lab04-client 2>/dev/null || true
