@@ -4,7 +4,7 @@ on:
   pull_request: 
     branches: [master]
     paths:
-      - 'lab04/server/**'
+      - 'lab04/src/server/**'
 
 env:
   IMAGE_NAME: lab04-server
