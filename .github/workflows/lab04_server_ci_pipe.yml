@@ -8,7 +8,7 @@ on:
 
 env:
   IMAGE_NAME: lab04-server
-  CONTEXT_PATH: lab04/server
+  CONTEXT_PATH: lab04/src/server
   PORT: 4000
 
 concurrency: 
